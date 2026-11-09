@@ -1,0 +1,37 @@
+dots-kyunkyun-nya 1.0.2
+Validation date: 2026-09-14
+Windows x64; RTX 3080; NVIDIA driver 581.95.
+Built with Adobe SDK 25.6, MSVC 14.38, CUDA 13.2.
+
+Changes: antialiasing defaults off; hard-edge span renderer and periodic geometry reuse; bounded per-worker scratch replaces dense-grid fallback; smaller source requests; no hidden-RGB request; zero-size/opacity early-out; canonical empty bounds for off-layer sources; About reports last render backend/dimensions. Existing parameter disk IDs preserved. Repeat Edges and fixed dot RGB behavior retained.
+
+Tests invoke the compiled .aex through exported EffectMain with mock Adobe suites and real CUDA streams/device memory. After Effects itself was not used.
+GPU: 3000 x 3000 float BGRA, pitch 3008; seeded opaque monochrome noise, Size 8, Gap 4, white, opacity 100%, alpha input range 0-100%, antialiasing 0, Repeat Edges off.
+Each GPU response: 30 warm-ups, 150 event-timed frames; excludes allocations/transfers.
+CPU: 8 workers, 3 warm-ups, 15 measured frames; includes render preparation/output writes, excludes source/output allocation.
+Same AA-off settings in v1.0.1: CPU medians 6.5838 / 7.5705 / 7.1426 ms at 8 / 16 / 32 bpc.
+Dense Size 1.6 / Gap 0.4 CPU 8 bpc: v1.0.1 median 101.647 ms, v1.0.2 median 37.115 ms.
+DotsKernel.cu
+DotsPiPL.r
+Dots.rrc
+Dots.cpp
+   Creating library Dots.lib and object Dots.exp
+Verify.cpp
+   Creating library Verify.lib and object Verify.exp
+GPU: NVIDIA GeForce RTX 3080
+PASS: 36 alpha-at-edge regressions on CPU and GPU; all four edges, cropped source origins, three inputs/responses, downsampling and fractional offsets. Max alpha error 7.15256e-07
+PASS: ROI-only source checkout equals full source; AA on/off, dense/large dots, 4-byte-aligned rows and padding. Max alpha error 0
+PASS: Repeat Edges off/on and fixed RGB through 1%, 10%, 50%, 100% opacity on CPU/GPU; alpha-only Levels cannot expose gray dots
+PASS: registration, flags, parameter IDs, pre-render ROI, balanced checkouts, 36 CPU/GPU cases. Maximum component error 2.67327e-05
+PASS: 24 integer-depth comparisons, padded rows, ROI/full-frame identity, zero size/opacity, empty source, solid mode, hard edges, alpha input levels
+3000x3000, response 0, 150 frames: GPU median 0.24064 ms; p95 0.256 ms; max 0.27136 ms
+3000x3000, response 1, 150 frames: GPU median 0.24368 ms; p95 0.277504 ms; max 0.300032 ms
+3000x3000, response 2, 150 frames: GPU median 0.242688 ms; p95 0.274432 ms; max 0.29984 ms
+Pageable host upload + effect + download: 48.8352 ms
+3000x3000 CPU 8 bpc, 8 workers, 15 frames: median 3.3278 ms; max 3.9157 ms
+3000x3000 CPU 16 bpc, 8 workers, 15 frames: median 5.4571 ms; max 6.0936 ms
+3000x3000 CPU 32 bpc, 8 workers, 15 frames: median 5.2327 ms; max 5.8037 ms
+3000x3000 CPU dense 8 bpc (size 1.6, gap 0.4), 8 workers, 15 frames: median 37.115 ms; max 38.6018 ms
+PASS: GPU teardown
+
+Limitations: Not installed or tested in the user's running After Effects composition, as requested. Approximately 20 ms AE timing remains unverified; no claim of a 10 ms full AE render. GPU-resident timings exclude host overhead. Fixed-RGB tests emulate alpha-only Levels; they do not invoke Adobe Levels. Existing effect instances retain saved antialiasing.
